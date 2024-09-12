@@ -16,7 +16,7 @@ type MenuItem = {
 
 
 
-const API_BASE_URL = 'http://localhost:5000';
+// const API_BASE_URL = 'http://localhost:5000';
 
 export default function Menu({ restaurantId }: { restaurantId: string }) {
     const [menuItems, setMenuItems] = useState<MenuItem[]>([])
@@ -31,7 +31,7 @@ export default function Menu({ restaurantId }: { restaurantId: string }) {
             setIsLoading(true)
             setError(null)
             try {
-                const response = await fetch(`${API_BASE_URL}/api/menu/${restaurantId}`)
+                const response = await fetch(`${process.env.API_BASE_URL}/api/menu/${restaurantId}`)
                 if (!response.ok) {
                     throw new Error('Failed to fetch menu items')
                 }

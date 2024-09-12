@@ -28,7 +28,7 @@ type Restaurant = {
     // Add other properties as needed
 }
 
-const API_BASE_URL = 'http://localhost:5000';
+// const API_BASE_URL = 'http://localhost:5000';
 
 function RestaurantContent() {
     const params = useParams()
@@ -46,7 +46,7 @@ function RestaurantContent() {
             setIsLoading(true)
             setError(null)
             try {
-                const response = await fetch(`${API_BASE_URL}/api/restaurant/${id}`)
+                const response = await fetch(`${process.env.API_BASE_URL}/api/restaurant/${id}`)
                 if (!response.ok) {
                     throw new Error('Failed to fetch restaurant details')
                 }

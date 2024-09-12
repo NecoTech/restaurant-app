@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 
 
-const API_BASE_URL = 'http://localhost:5000';
+// const API_BASE_URL = 'http://localhost:5000';
 type Order = {
     _id: string;
     orderNumber: string;
@@ -29,7 +29,7 @@ export default function KitchenOrders() {
 
     const fetchOrders = async () => {
         try {
-            const response = await fetch(`${API_BASE_URL}/api/orders/${restid}`);
+            const response = await fetch(`${process.env.API_BASE_URL}/api/orders/${restid}`);
             if (!response.ok) {
                 throw new Error('Failed to fetch orders');
             }
@@ -42,7 +42,7 @@ export default function KitchenOrders() {
 
     const markOrderCompleted = async (orderId: string) => {
         try {
-            const response = await fetch(`${API_BASE_URL}/api/orders/${orderId}/complete`, {
+            const response = await fetch(`${process.env.API_BASE_URL}/api/orders/${orderId}/complete`, {
                 method: 'PATCH',
             });
             if (!response.ok) {
