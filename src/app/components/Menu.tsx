@@ -30,8 +30,9 @@ export default function Menu({ restaurantId }: { restaurantId: string }) {
         const fetchMenuItems = async () => {
             setIsLoading(true)
             setError(null)
+            console.log()
             try {
-                const response = await fetch(`${process.env.API_BASE_URL}/api/menu/${restaurantId}`)
+                const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/menu/${restaurantId}`)
                 if (!response.ok) {
                     throw new Error('Failed to fetch menu items')
                 }

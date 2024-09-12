@@ -12,17 +12,8 @@ const nextConfig = {
     }, reactStrictMode: true,
     images: {
         domains: ['picsum.photos'], // Add the domain of your image URLs
-    },
-    async rewrites() {
-        return [
-            {
-                source: '/api/:path*',
-                destination: 'http://localhost:5000/api/:path*', // Proxy API requests to your local server
-            },
-        ]
-    },
+    }
 };
 
 export default nextConfig;
-
 

@@ -46,7 +46,7 @@ function RestaurantContent() {
             setIsLoading(true)
             setError(null)
             try {
-                const response = await fetch(`${process.env.API_BASE_URL}/api/restaurant/${id}`)
+                const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/restaurant/${id}`)
                 if (!response.ok) {
                     throw new Error('Failed to fetch restaurant details')
                 }

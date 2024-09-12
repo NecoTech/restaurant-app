@@ -52,7 +52,7 @@ export default function Payment() {
         }
 
         try {
-            const response = await fetch(`${process.env.API_BASE_URL}/api/orders`, {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/orders`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
