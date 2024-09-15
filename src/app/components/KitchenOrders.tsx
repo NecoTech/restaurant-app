@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
+// import { useParams } from 'next/navigation';
 
 
 // const API_BASE_URL = 'http://localhost:5000';
@@ -16,10 +16,10 @@ type Order = {
     createdAt: string;
 };
 
-export default function KitchenOrders() {
+export default function KitchenOrders({ restaurantId }: { restaurantId: string }) {
     const [orders, setOrders] = useState<Order[]>([]);
-    const { restaurantId } = useParams();
-    const restid = "rest002"
+    // const { restaurantId } = useParams();
+    // const restid = "rest002"
     useEffect(() => {
         fetchOrders();
         // Set up polling to refresh orders every 30 seconds
@@ -29,7 +29,7 @@ export default function KitchenOrders() {
 
     const fetchOrders = async () => {
         try {
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/orders/${restid}`);
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/orders/${restaurantId}`);
             if (!response.ok) {
                 throw new Error('Failed to fetch orders');
             }
