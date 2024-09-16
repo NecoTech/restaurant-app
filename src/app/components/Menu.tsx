@@ -2,21 +2,17 @@
 
 import { useState, useEffect } from 'react'
 import Image from 'next/image'
-import { useCart } from '..//context/CartContext'
+import { useCart } from '../context/CartContext'
 
 type MenuItem = {
     _id: string
-    id: string  // This is actually the restaurant ID
+    id: string
     name: string
-    description: string
     price: number
     category: string
     image: string
+    description: string
 }
-
-
-
-// const API_BASE_URL = 'http://localhost:5000';
 
 export default function Menu({ restaurantId }: { restaurantId: string }) {
     const [menuItems, setMenuItems] = useState<MenuItem[]>([])
@@ -25,12 +21,10 @@ export default function Menu({ restaurantId }: { restaurantId: string }) {
     const [error, setError] = useState<string | null>(null)
     const { addToCart } = useCart()
 
-
     useEffect(() => {
         const fetchMenuItems = async () => {
             setIsLoading(true)
             setError(null)
-            console.log()
             try {
                 const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/menu/${restaurantId}`)
                 if (!response.ok) {
@@ -63,34 +57,8 @@ export default function Menu({ restaurantId }: { restaurantId: string }) {
         return <div className="text-center py-4 text-red-500">{error}</div>
     }
 
-    const handleAddToCart = (item: MenuItem) => {
-        const cartItem = {
-            _id: item._id,
-            id: item.id,
-            name: item.name,
-            price: item.price,
-            image: item.image,
-            description: item.description
-        }
-        addToCart(cartItem)
-    }
-
     return (
-        <div className="w-full pb-32">
-            <div className="flex overflow-x-auto py-2 mb-4 no-scrollbar">
-                {categories.map((category) => (
-                    <button
-                        key={category}
-                        onClick={() => setActiveCategory(category)}
-                        className={`flex-shrink-0 px-4 py-2 mx-1 rounded-full whitespace-nowrap ${activeCategory === category
-                            ? 'bg-blue-500 text-white'
-                            : 'bg-gray-200 text-gray-800'
-                            }`}
-                    >
-                        {category}
-                    </button>
-                ))}
-            </div>
+        <div className="w-full pb-32"> {/* Increased bottom padding to make room for category tabs */}
             <div className="space-y-4 mb-4">
                 {filteredItems.map((item) => (
                     <div key={item._id} className="flex items-center bg-white p-4 rounded-lg shadow">
@@ -105,17 +73,33 @@ export default function Menu({ restaurantId }: { restaurantId: string }) {
                         </div>
                         <div className="flex-grow">
                             <h3 className="font-bold text-lg">{item.name}</h3>
-                            {/* <p className="text-sm text-gray-600">{item.description}</p> */}
+                            <p className="text-sm text-gray-600">{item.description}</p>
                             <p className="text-blue-600 font-semibold mt-1">${item.price.toFixed(2)}</p>
                         </div>
                         <button
-                            onClick={() => handleAddToCart(item)}
+                            onClick={() => addToCart(item)}
                             className="bg-green-500 text-white px-4 py-2 rounded-full hover:bg-green-600 transition-colors"
                         >
                             Add
                         </button>
                     </div>
                 ))}
+            </div>
+            <div className="fixed bottom-0 left-0 right-0 bg-white shadow-md z-10">
+                <div className="flex overflow-x-auto py-2 px-4 no-scrollbar">
+                    {categories.map((category) => (
+                        <button
+                            key={category}
+                            onClick={() => setActiveCategory(category)}
+                            className={`flex-shrink-0 px-4 py-2 mx-1 rounded-full whitespace-nowrap ${activeCategory === category
+                                ? 'bg-blue-500 text-white'
+                                : 'bg-gray-200 text-gray-800'
+                                }`}
+                        >
+                            {category}
+                        </button>
+                    ))}
+                </div>
             </div>
         </div>
     )
