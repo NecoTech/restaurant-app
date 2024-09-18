@@ -65,7 +65,7 @@ export default function Payment() {
             }
 
             const savedOrder = await response.json()
-            setOrderId(savedOrder.orderNumber)
+            setOrderId(savedOrder._id)
             setOrderPlaced(true)
             clearCart()
         } catch (error) {
@@ -114,6 +114,12 @@ export default function Payment() {
                     className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
                 >
                     Return to Home
+                </button>
+                <button
+                    onClick={() => router.push(`/order-status/${orderId}`)}
+                    className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+                >
+                    View Order Status
                 </button>
             </div>
         )

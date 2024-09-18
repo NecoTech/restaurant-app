@@ -2,7 +2,9 @@
 
 import { useState, useEffect } from 'react'
 import Image from 'next/image'
-import { useCart } from '../context/CartContext'
+import { useCart } from '..//context/CartContext'
+import { useRouter } from 'next/navigation'
+import { useAuth } from '..//context/AuthContext'
 
 type MenuItem = {
     _id: string
@@ -20,6 +22,8 @@ export default function Menu({ restaurantId }: { restaurantId: string }) {
     const [isLoading, setIsLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const { addToCart } = useCart()
+    const router = useRouter()
+    const { user } = useAuth()
 
     useEffect(() => {
         const fetchMenuItems = async () => {
@@ -49,6 +53,10 @@ export default function Menu({ restaurantId }: { restaurantId: string }) {
         ? menuItems
         : menuItems.filter(item => item.category === activeCategory)
 
+    const handleViewOrders = () => {
+        router.push(`/orders/${user?.phoneNumber}`)
+    }
+
     if (isLoading) {
         return <div className="text-center py-4">Loading menu items...</div>
     }
@@ -58,8 +66,21 @@ export default function Menu({ restaurantId }: { restaurantId: string }) {
     }
 
     return (
-        <div className="w-full pb-32"> {/* Increased bottom padding to make room for category tabs */}
-            <div className="space-y-4 mb-4">
+        <div className="w-full pb-32">
+            <div className="sticky top-0 bg-white z-10 p-4 shadow-md flex justify-between items-center">
+                <h1 className="text-xl font-bold">Menu</h1>
+                <button
+                    onClick={handleViewOrders}
+                    className="text-blue-500 hover:text-blue-600 transition-colors"
+                    aria-label="View Your Orders"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                    </svg>
+                </button>
+            </div>
+
+            <div className="mt-4 space-y-4 mb-4">
                 {filteredItems.map((item) => (
                     <div key={item._id} className="flex items-center bg-white p-4 rounded-lg shadow">
                         <div className="relative w-24 h-24 mr-4">
@@ -92,8 +113,8 @@ export default function Menu({ restaurantId }: { restaurantId: string }) {
                             key={category}
                             onClick={() => setActiveCategory(category)}
                             className={`flex-shrink-0 px-4 py-2 mx-1 rounded-full whitespace-nowrap ${activeCategory === category
-                                ? 'bg-blue-500 text-white'
-                                : 'bg-gray-200 text-gray-800'
+                                    ? 'bg-blue-500 text-white'
+                                    : 'bg-gray-200 text-gray-800'
                                 }`}
                         >
                             {category}
