@@ -29,7 +29,7 @@ export default function KitchenOrders({ restaurantId }: { restaurantId: string }
 
     const fetchOrders = async () => {
         try {
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/orders/${restaurantId}`);
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/orders/restaurant/${restaurantId}`);
             if (!response.ok) {
                 throw new Error('Failed to fetch orders');
             }

@@ -29,7 +29,7 @@ export default function OrderStatus({ orderId }: { orderId: string }) {
             setIsLoading(true)
             setError(null)
             try {
-                const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/order/${orderId}`)
+                const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/orders/${orderId}`)
                 if (!response.ok) {
                     throw new Error('Failed to fetch order status')
                 }

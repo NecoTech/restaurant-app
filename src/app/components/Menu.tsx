@@ -21,7 +21,7 @@ export default function Menu({ restaurantId }: { restaurantId: string }) {
     const [activeCategory, setActiveCategory] = useState<string>('All')
     const [isLoading, setIsLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
-    const { addToCart } = useCart()
+    const { addToCart, updateQuantity, cartItems } = useCart()
     const router = useRouter()
     const { user } = useAuth()
 
@@ -55,6 +55,19 @@ export default function Menu({ restaurantId }: { restaurantId: string }) {
 
     const handleViewOrders = () => {
         router.push(`/orders/${user?.phoneNumber}`)
+    }
+
+    const getItemQuantity = (itemId: string) => {
+        const cartItem = cartItems.find(item => item._id === itemId)
+        return cartItem ? cartItem.quantity : 0
+    }
+
+    const handleAddToCart = (item: MenuItem) => {
+        addToCart(item)
+    }
+
+    const handleUpdateQuantity = (itemId: string, newQuantity: number) => {
+        updateQuantity(itemId, newQuantity)
     }
 
     if (isLoading) {
@@ -97,12 +110,22 @@ export default function Menu({ restaurantId }: { restaurantId: string }) {
                             <p className="text-sm text-gray-600">{item.description}</p>
                             <p className="text-blue-600 font-semibold mt-1">${item.price.toFixed(2)}</p>
                         </div>
-                        <button
-                            onClick={() => addToCart(item)}
-                            className="bg-green-500 text-white px-4 py-2 rounded-full hover:bg-green-600 transition-colors"
-                        >
-                            Add
-                        </button>
+                        <div className="flex items-center">
+                            <button
+                                onClick={() => handleUpdateQuantity(item._id, getItemQuantity(item._id) - 1)}
+                                className="bg-gray-200 text-gray-700 w-8 h-8 rounded-full flex items-center justify-center hover:bg-gray-300 transition-colors"
+                                disabled={getItemQuantity(item._id) === 0}
+                            >
+                                -
+                            </button>
+                            <span className="mx-2 w-8 text-center">{getItemQuantity(item._id)}</span>
+                            <button
+                                onClick={() => handleAddToCart(item)}
+                                className="bg-blue-500 text-white w-8 h-8 rounded-full flex items-center justify-center hover:bg-blue-600 transition-colors"
+                            >
+                                +
+                            </button>
+                        </div>
                     </div>
                 ))}
             </div>
@@ -113,8 +136,8 @@ export default function Menu({ restaurantId }: { restaurantId: string }) {
                             key={category}
                             onClick={() => setActiveCategory(category)}
                             className={`flex-shrink-0 px-4 py-2 mx-1 rounded-full whitespace-nowrap ${activeCategory === category
-                                    ? 'bg-blue-500 text-white'
-                                    : 'bg-gray-200 text-gray-800'
+                                ? 'bg-blue-500 text-white'
+                                : 'bg-gray-200 text-gray-800'
                                 }`}
                         >
                             {category}
