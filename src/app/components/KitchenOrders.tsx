@@ -12,6 +12,7 @@ type Order = {
         name: string;
         quantity: number;
     }>;
+    userId: string;
     tableNumber: number;
     createdAt: string;
 };
@@ -65,6 +66,7 @@ export default function KitchenOrders({ restaurantId }: { restaurantId: string }
                     {orders.map((order) => (
                         <div key={order._id} className="bg-white shadow-md rounded-lg p-4">
                             <h2 className="text-xl font-semibold mb-2">Order #{order.orderNumber}</h2>
+                            <p className="text-gray-600 mb-2">Customer: {order.userId}</p>
                             <p className="text-gray-600 mb-2">Table: {order.tableNumber}</p>
                             <p className="text-gray-600 mb-2">
                                 Time: {new Date(order.createdAt).toLocaleTimeString()}
