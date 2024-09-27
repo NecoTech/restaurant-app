@@ -11,7 +11,7 @@ const nextConfig = {
         ],
     }, reactStrictMode: true,
     images: {
-        domains: ['picsum.photos'], // Add the domain of your image URLs
+        domains: ['picsum.photos', 'media1.tenor.com'], // Add the domain of your image URLs
     }
 };
 
