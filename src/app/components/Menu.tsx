@@ -18,6 +18,7 @@ type MenuItem = {
 }
 
 export default function Menu({ restaurantId }: { restaurantId: string }) {
+
     const [menuItems, setMenuItems] = useState<MenuItem[]>([])
     const [activeCategory, setActiveCategory] = useState<string>('All')
     const [isLoading, setIsLoading] = useState(true)
@@ -29,26 +30,46 @@ export default function Menu({ restaurantId }: { restaurantId: string }) {
     const [waiterReason, setWaiterReason] = useState<string>('Assistance')
     const [tableNumber, setTableNumber] = useState<string>('')
 
-    useEffect(() => {
-        const fetchMenuItems = async () => {
-            setIsLoading(true)
-            setError(null)
-            try {
-                const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/menu/${restaurantId}`)
-                if (!response.ok) {
-                    throw new Error('Failed to fetch menu items')
-                }
-                const data = await response.json()
-                setMenuItems(data)
-            } catch (err) {
-                setError('Failed to load menu items. Please try again later.')
-                console.error(err)
-            } finally {
-                setIsLoading(false)
-            }
-        }
+    const handleQuantityUpdate = (e: React.MouseEvent, itemId: string, action: 'increase' | 'decrease') => {
+        e.preventDefault()
+        e.stopPropagation()
 
+        const currentQuantity = getItemQuantity(itemId)
+        const item = menuItems.find(item => item._id === itemId)
+
+        if (!item) return
+
+        if (action === 'increase') {
+            handleAddToCart(item)
+        } else {
+            handleUpdateQuantity(itemId, currentQuantity - 1)
+        }
+    }
+
+    const fetchMenuItems = async () => {
+        try {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/menu/${restaurantId}`)
+            if (!response.ok) {
+                throw new Error('Failed to fetch menu items')
+            }
+            const data = await response.json()
+            setMenuItems(data)
+            setIsLoading(false)
+        } catch (err) {
+            setError('Failed to load menu items. Please try again later.')
+            console.error(err)
+            setIsLoading(false)
+        }
+    }
+
+    useEffect(() => {
         fetchMenuItems()
+
+        // Set up interval to fetch menu items every 15 seconds
+        const intervalId = setInterval(fetchMenuItems, 25000)
+
+        // Clean up interval on component unmount
+        return () => clearInterval(intervalId)
     }, [restaurantId])
 
     const categories = ['All', ...Array.from(new Set(menuItems.map(item => item.category)))]
@@ -205,14 +226,19 @@ export default function Menu({ restaurantId }: { restaurantId: string }) {
                         </div>
                         <div className="flex-grow">
                             <h3 className="font-bold text-lg">{item.name}</h3>
-                            <p className="text-sm text-gray-600 line-clamp-2">{item.description}</p>
                             <p className="text-blue-600 font-semibold mt-1">${item.price.toFixed(2)}</p>
                         </div>
-                        <div className="flex items-center" onClick={(e) => e.stopPropagation()}>
+                        <div
+                            className="flex items-center"
+                            onClick={(e) => {
+                                e.preventDefault()
+                                e.stopPropagation()
+                            }}
+                        >
                             {item.isAvailable ? (
                                 getItemQuantity(item._id) === 0 ? (
                                     <button
-                                        onClick={() => handleAddToCart(item)}
+                                        onClick={(e) => handleQuantityUpdate(e, item._id, 'increase')}
                                         className="bg-blue-500 text-white px-4 py-2 rounded-full hover:bg-blue-600 transition-colors"
                                     >
                                         Add
@@ -220,14 +246,14 @@ export default function Menu({ restaurantId }: { restaurantId: string }) {
                                 ) : (
                                     <div className="flex items-center">
                                         <button
-                                            onClick={() => handleUpdateQuantity(item._id, getItemQuantity(item._id) - 1)}
+                                            onClick={(e) => handleQuantityUpdate(e, item._id, 'decrease')}
                                             className="bg-gray-200 text-gray-700 w-8 h-8 rounded-full flex items-center justify-center hover:bg-gray-300 transition-colors"
                                         >
                                             -
                                         </button>
                                         <span className="mx-2 w-8 text-center">{getItemQuantity(item._id)}</span>
                                         <button
-                                            onClick={() => handleAddToCart(item)}
+                                            onClick={(e) => handleQuantityUpdate(e, item._id, 'increase')}
                                             className="bg-blue-500 text-white w-8 h-8 rounded-full flex items-center justify-center hover:bg-blue-600 transition-colors"
                                         >
                                             +
@@ -241,6 +267,7 @@ export default function Menu({ restaurantId }: { restaurantId: string }) {
                     </div>
                 ))}
             </div>
+
             <div className="fixed bottom-0 left-0 right-0 bg-white shadow-md z-10">
                 <div className="flex overflow-x-auto py-2 px-4 no-scrollbar">
                     {categories.map((category) => (

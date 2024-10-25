@@ -1,15 +1,15 @@
 'use client'
 
-import React, { createContext, useState, useContext, useEffect } from 'react'
+import React, { createContext, useState, useContext, useEffect, useCallback, useMemo } from 'react'
 
 type CartItem = {
-    _id: string  // Changed from number to string
-    id: string   // This is the restaurant ID
+    _id: string
+    id: string
     name: string
     price: number
     quantity: number
     image: string
-    description: string  // Added this field
+    description: string
 }
 
 type CartContextType = {
@@ -24,7 +24,6 @@ type CartContextType = {
     setTableNumber: (number: number | null) => void
 }
 
-
 const CartContext = createContext<CartContextType | undefined>(undefined)
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
@@ -33,35 +32,55 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     const [tableNumber, setTableNumber] = useState<number | null>(null)
     const [isInitialized, setIsInitialized] = useState(false)
 
+    // Load initial state from localStorage
     useEffect(() => {
         const savedCart = localStorage.getItem('cart')
         const savedRestaurantId = localStorage.getItem('restaurantId')
         const savedTableNumber = localStorage.getItem('tableNumber')
+
         if (savedCart && savedRestaurantId) {
-            setCartItems(JSON.parse(savedCart))
-            setRestaurantId(savedRestaurantId)
+            try {
+                setCartItems(JSON.parse(savedCart))
+                setRestaurantId(savedRestaurantId)
+            } catch (error) {
+                console.error('Error parsing saved cart:', error)
+                localStorage.removeItem('cart')
+            }
         }
+
         if (savedTableNumber) {
             setTableNumber(parseInt(savedTableNumber))
         }
+
         setIsInitialized(true)
     }, [])
 
+    // Save state to localStorage with debounce
     useEffect(() => {
-        if (isInitialized) {
-            localStorage.setItem('cart', JSON.stringify(cartItems))
-            if (restaurantId) {
-                localStorage.setItem('restaurantId', restaurantId)
-            }
-            if (tableNumber !== null) {
-                localStorage.setItem('tableNumber', tableNumber.toString())
-            } else {
-                localStorage.removeItem('tableNumber')
+        if (!isInitialized) return
+
+        const saveToStorage = () => {
+            try {
+                localStorage.setItem('cart', JSON.stringify(cartItems))
+                if (restaurantId) {
+                    localStorage.setItem('restaurantId', restaurantId)
+                }
+                if (tableNumber !== null) {
+                    localStorage.setItem('tableNumber', tableNumber.toString())
+                } else {
+                    localStorage.removeItem('tableNumber')
+                }
+            } catch (error) {
+                console.error('Error saving cart to localStorage:', error)
             }
         }
+
+        const timeoutId = setTimeout(saveToStorage, 300) // Debounce for 300ms
+        return () => clearTimeout(timeoutId)
     }, [cartItems, restaurantId, tableNumber, isInitialized])
 
-    const addToCart = (item: Omit<CartItem, 'quantity'>) => {
+    // Memoized cart operations
+    const addToCart = useCallback((item: Omit<CartItem, 'quantity'>) => {
         setCartItems((prevItems) => {
             const existingItem = prevItems.find((i) => i._id === item._id)
             if (existingItem) {
@@ -71,30 +90,35 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             }
             return [...prevItems, { ...item, quantity: 1 }]
         })
-    }
+    }, [])
 
-    const updateQuantity = (id: string, quantity: number) => {
-        setCartItems((prevItems) =>
-            prevItems.map((item) =>
+    const updateQuantity = useCallback((id: string, quantity: number) => {
+        setCartItems((prevItems) => {
+            const newItems = prevItems.map((item) =>
                 item._id === id ? { ...item, quantity: Math.max(0, quantity) } : item
             ).filter((item) => item.quantity > 0)
-        )
-    }
 
-    const removeFromCart = (id: string) => {
+            // Only trigger update if there's an actual change
+            if (JSON.stringify(newItems) !== JSON.stringify(prevItems)) {
+                return newItems
+            }
+            return prevItems
+        })
+    }, [])
+
+    const removeFromCart = useCallback((id: string) => {
         setCartItems((prevItems) => prevItems.filter((item) => item._id !== id))
-    }
+    }, [])
 
-    const clearCart = () => {
+    const clearCart = useCallback(() => {
         setCartItems([])
-        // setRestaurantId(null)
         localStorage.removeItem('cart')
         localStorage.removeItem('restaurantId')
         localStorage.removeItem('tableNumber')
         setTableNumber(null)
-    }
+    }, [])
 
-    const setRestaurantIdSafely = (id: string) => {
+    const setRestaurantIdSafely = useCallback((id: string) => {
         if (localStorage.getItem('restaurantId') !== id) {
             setRestaurantId(id)
             setCartItems([])
@@ -102,25 +126,38 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             localStorage.removeItem('cart')
             localStorage.removeItem('tableNumber')
         }
-    }
+    }, [])
+
+    // Memoize the context value to prevent unnecessary re-renders
+    const contextValue = useMemo(() => ({
+        cartItems,
+        restaurantId,
+        tableNumber,
+        addToCart,
+        updateQuantity,
+        removeFromCart,
+        clearCart,
+        setRestaurantId: setRestaurantIdSafely,
+        setTableNumber
+    }), [
+        cartItems,
+        restaurantId,
+        tableNumber,
+        addToCart,
+        updateQuantity,
+        removeFromCart,
+        clearCart,
+        setRestaurantIdSafely
+    ])
 
     return (
-        <CartContext.Provider value={{
-            cartItems,
-            restaurantId,
-            tableNumber,
-            addToCart,
-            updateQuantity,
-            removeFromCart,
-            clearCart,
-            setRestaurantId: setRestaurantIdSafely,
-            setTableNumber
-        }}>
+        <CartContext.Provider value={contextValue}>
             {children}
         </CartContext.Provider>
     )
 }
 
+// Custom hook with error boundary
 export function useCart() {
     const context = useContext(CartContext)
     if (context === undefined) {
@@ -128,3 +165,20 @@ export function useCart() {
     }
     return context
 }
+
+// Optional: Add a wrapper component for optimized cart item renders
+export const CartItemComponent = React.memo(function CartItemComponent({
+    item,
+    onUpdateQuantity
+}: {
+    item: CartItem
+    onUpdateQuantity: (id: string, quantity: number) => void
+}) {
+    return (
+        <div>
+            {/* Your cart item UI here */}
+            <span>{item.name}</span>
+            <span>Quantity: {item.quantity}</span>
+        </div>
+    )
+})
