@@ -5,6 +5,7 @@ import Image from 'next/image'
 import { useCart } from '..//context/CartContext'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '..//context/AuthContext'
+import DinoGame from '../components/Dinogame'
 
 type MenuItem = {
     _id: string
@@ -144,10 +145,11 @@ export default function Menu({ restaurantId }: { restaurantId: string }) {
         <div className="w-full pb-32">
             <div className="sticky top-0 bg-white z-10 p-4 shadow-md flex justify-between items-center">
                 <h1 className="text-xl font-bold">Menu</h1>
-                <div className="flex items-center">
+                <div className="flex items-center space-x-4">
+                    <DinoGame />
                     <button
                         onClick={() => setIsWaiterModalOpen(true)}
-                        className="mr-4 bg-yellow-500 text-white px-4 py-2 rounded-full hover:bg-yellow-600 transition-colors"
+                        className="bg-yellow-500 text-white px-4 py-2 rounded-full hover:bg-yellow-600 transition-colors"
                     >
                         Call Waiter
                     </button>
