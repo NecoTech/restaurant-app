@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useRef, useCallback } from 'react'
+import { Gamepad2Icon } from 'lucide-react'
 
 type GameCharacter = {
     y: number
@@ -202,9 +203,10 @@ export default function DinoGame() {
         <>
             <button
                 onClick={() => setShowGame(!showGame)}
-                className="bg-purple-500 text-white px-4 py-2 rounded-full hover:bg-purple-600 transition-colors"
+
             >
-                {showGame ? 'Hide Game' : 'Play Game'}
+                <Gamepad2Icon className="w-5 h-5" />
+                {/* {showGame ? 'Hide Game' : 'Play Game'} */}
             </button>
 
             {showGame && (

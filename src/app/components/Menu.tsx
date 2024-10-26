@@ -146,13 +146,14 @@ export default function Menu({ restaurantId }: { restaurantId: string }) {
             <div className="sticky top-0 bg-white z-10 p-4 shadow-md flex justify-between items-center">
                 <h1 className="text-xl font-bold">Menu</h1>
                 <div className="flex items-center space-x-4">
-                    <DinoGame />
+
                     <button
                         onClick={() => setIsWaiterModalOpen(true)}
                         className="bg-yellow-500 text-white px-4 py-2 rounded-full hover:bg-yellow-600 transition-colors"
                     >
                         Call Waiter
                     </button>
+                    <DinoGame />
                     <button
                         onClick={handleViewOrders}
                         className="text-blue-500 hover:text-blue-600 transition-colors"
