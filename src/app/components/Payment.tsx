@@ -36,9 +36,12 @@ export default function Payment() {
         const restaurantId = restaurantid // Replace with actual restaurant ID
         const phonenumber = user?.phoneNumber
 
+        // Remove image data from cart items
+        const orderItems = cartItems.map(({ image, ...item }) => item)
+
         const orderDetails = {
             orderNumber,
-            items: cartItems,
+            items: orderItems, // Using the filtered items without images
             subtotal,
             tax,
             total,

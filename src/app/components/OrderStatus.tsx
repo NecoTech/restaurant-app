@@ -95,7 +95,7 @@ export default function OrderStatus({ orderId }: { orderId: string }) {
             </div>
 
             <button
-                onClick={() => router.push('/')}
+                onClick={() => router.back()}
                 className="mt-6 w-full bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 transition-colors"
             >
                 Back to Menu

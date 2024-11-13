@@ -13,11 +13,16 @@ type MenuItem = {
     name: string
     price: number
     category: string
-    image: string
+    image: {
+        data: {
+            type: string
+            data: number[]
+        }
+        contentType: string
+    }
     description: string
     isAvailable: boolean
 }
-
 export default function Menu({ restaurantId }: { restaurantId: string }) {
 
     const [menuItems, setMenuItems] = useState<MenuItem[]>([])
@@ -45,6 +50,14 @@ export default function Menu({ restaurantId }: { restaurantId: string }) {
         } else {
             handleUpdateQuantity(itemId, currentQuantity - 1)
         }
+    }
+
+    const getImageUrl = (item: MenuItem) => {
+        if (item.image?.data?.data) {
+            const base64String = Buffer.from(item.image.data.data).toString('base64')
+            return `data:${item.image.contentType};base64,${base64String}`
+        }
+        return '' // Return empty string or a default image URL
     }
 
     const fetchMenuItems = async () => {
@@ -213,14 +226,16 @@ export default function Menu({ restaurantId }: { restaurantId: string }) {
                         className={`flex items-center bg-white p-4 rounded-lg shadow cursor-pointer hover:shadow-md transition-shadow ${!item.isAvailable ? 'opacity-50' : ''}`}
                         onClick={() => handleItemClick(item._id)}
                     >
-                        <div className="relative w-24 h-24 mr-4">
-                            <Image
-                                src={item.image}
-                                alt={item.name}
-                                layout="fill"
-                                objectFit="cover"
-                                className="rounded-md"
-                            />
+                        <div className="relative w-24 h-24 mr-4 bg-gray-200 rounded-md">
+                            {getImageUrl(item) && (
+                                <Image
+                                    src={getImageUrl(item)}
+                                    alt={item.name}
+                                    layout="fill"
+                                    objectFit="cover"
+                                    className="rounded-md"
+                                />
+                            )}
                             {!item.isAvailable && (
                                 <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center rounded-md">
                                     <span className="text-white font-bold">Out of Stock</span>

@@ -8,8 +8,19 @@ type CartItem = {
     name: string
     price: number
     quantity: number
-    image: string
+    image: {
+        data: {
+            type: string
+            data: number[]
+        }
+        contentType: string
+    }
     description: string
+}
+
+// Type for storage (excluding image)
+type StorageCartItem = Omit<CartItem, 'image'> & {
+    image?: never
 }
 
 type CartContextType = {
@@ -32,6 +43,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     const [tableNumber, setTableNumber] = useState<number | null>(null)
     const [isInitialized, setIsInitialized] = useState(false)
 
+    // Helper function to remove image data for storage
+    const prepareForStorage = (items: CartItem[]): StorageCartItem[] => {
+        return items.map(({ image, ...rest }) => rest)
+    }
+
     // Load initial state from localStorage
     useEffect(() => {
         const savedCart = localStorage.getItem('cart')
@@ -40,7 +56,30 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
         if (savedCart && savedRestaurantId) {
             try {
-                setCartItems(JSON.parse(savedCart))
+                const parsedCart = JSON.parse(savedCart) as StorageCartItem[]
+                // Fetch current items to get their images
+                const fetchItemDetails = async () => {
+                    try {
+                        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/menu/${savedRestaurantId}`)
+                        if (!response.ok) throw new Error('Failed to fetch menu items')
+                        const menuItems = await response.json()
+
+                        // Merge saved cart items with fetched menu items to get images
+                        const updatedCart = parsedCart.map(cartItem => {
+                            const menuItem = menuItems.find((item: any) => item._id === cartItem._id)
+                            return {
+                                ...cartItem,
+                                image: menuItem?.image || null
+                            }
+                        })
+                        setCartItems(updatedCart)
+                    } catch (error) {
+                        console.error('Error fetching menu items:', error)
+                        // setCartItems(parsedCart as CartItem[]) // Fallback to saved cart without images
+                    }
+                }
+
+                fetchItemDetails()
                 setRestaurantId(savedRestaurantId)
             } catch (error) {
                 console.error('Error parsing saved cart:', error)
@@ -61,7 +100,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
         const saveToStorage = () => {
             try {
-                localStorage.setItem('cart', JSON.stringify(cartItems))
+                const storageItems = prepareForStorage(cartItems)
+                localStorage.setItem('cart', JSON.stringify(storageItems))
                 if (restaurantId) {
                     localStorage.setItem('restaurantId', restaurantId)
                 }
@@ -75,11 +115,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             }
         }
 
-        const timeoutId = setTimeout(saveToStorage, 300) // Debounce for 300ms
+        const timeoutId = setTimeout(saveToStorage, 300)
         return () => clearTimeout(timeoutId)
     }, [cartItems, restaurantId, tableNumber, isInitialized])
 
-    // Memoized cart operations
     const addToCart = useCallback((item: Omit<CartItem, 'quantity'>) => {
         setCartItems((prevItems) => {
             const existingItem = prevItems.find((i) => i._id === item._id)
@@ -98,8 +137,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
                 item._id === id ? { ...item, quantity: Math.max(0, quantity) } : item
             ).filter((item) => item.quantity > 0)
 
-            // Only trigger update if there's an actual change
-            if (JSON.stringify(newItems) !== JSON.stringify(prevItems)) {
+            if (JSON.stringify(prepareForStorage(newItems)) !== JSON.stringify(prepareForStorage(prevItems))) {
                 return newItems
             }
             return prevItems
@@ -128,7 +166,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         }
     }, [])
 
-    // Memoize the context value to prevent unnecessary re-renders
     const contextValue = useMemo(() => ({
         cartItems,
         restaurantId,
@@ -157,7 +194,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     )
 }
 
-// Custom hook with error boundary
 export function useCart() {
     const context = useContext(CartContext)
     if (context === undefined) {
@@ -166,7 +202,6 @@ export function useCart() {
     return context
 }
 
-// Optional: Add a wrapper component for optimized cart item renders
 export const CartItemComponent = React.memo(function CartItemComponent({
     item,
     onUpdateQuantity
@@ -176,7 +211,6 @@ export const CartItemComponent = React.memo(function CartItemComponent({
 }) {
     return (
         <div>
-            {/* Your cart item UI here */}
             <span>{item.name}</span>
             <span>Quantity: {item.quantity}</span>
         </div>
