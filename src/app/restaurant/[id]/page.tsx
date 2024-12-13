@@ -48,8 +48,8 @@ function RestaurantContent() {
                 setRestaurantId(id as string)
 
                 // Create image URL from base64 data
-                if (data[0].bannerImage?.data) {
-                    const imageUrl = `data:${data[0].bannerImage.contentType};base64,${data[0].bannerImage.data}`
+                if (data[0].bannerImage) {
+                    const imageUrl = `data:${data[0].bannerImage.contentType};base64,${data[0].bannerImage}`
                     setBannerUrl(imageUrl)
                 }
             } catch (err) {
