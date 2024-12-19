@@ -7,16 +7,14 @@ import { useRouter } from 'next/navigation'
 
 type CartItemType = {
     _id: string
+    categoryId: string
     name: string
     price: number
     quantity: number
-    image: {
-        data: {
-            type: string
-            data: number[]
-        }
-        contentType: string
-    }
+    image?: string
+    description?: string
+    volume?: string
+    isAvailable: boolean
 }
 
 export default function Cart({ restaurantId }: { restaurantId: string }) {
@@ -42,14 +40,6 @@ export default function Cart({ restaurantId }: { restaurantId: string }) {
         } else {
             setTableNumber(null)
         }
-    }
-
-    const getImageUrl = (item: CartItemType) => {
-        if (item.image?.data?.data) {
-            const base64String = Buffer.from(item.image.data.data).toString('base64')
-            return `data:${item.image.contentType};base64,${base64String}`
-        }
-        return ''
     }
 
     if (cartItems.length === 0) {
@@ -78,9 +68,9 @@ export default function Cart({ restaurantId }: { restaurantId: string }) {
             {cartItems.map((item) => (
                 <div key={item._id} className="flex items-center mb-4 pb-4 border-b">
                     <div className="relative w-20 h-20 mr-4 bg-gray-200 rounded-md">
-                        {getImageUrl(item) && (
+                        {item.image && (
                             <Image
-                                src={getImageUrl(item)}
+                                src={`data:image/jpeg;base64,${item.image}`}
                                 alt={item.name}
                                 layout="fill"
                                 objectFit="cover"
@@ -91,6 +81,9 @@ export default function Cart({ restaurantId }: { restaurantId: string }) {
                     <div className="flex-grow">
                         <h3 className="font-bold text-lg">{item.name}</h3>
                         <p className="text-gray-600">${item.price.toFixed(2)} each</p>
+                        {item.volume && (
+                            <p className="text-gray-500 text-sm">{item.volume}</p>
+                        )}
                     </div>
                     <div className="flex items-center">
                         <button
@@ -103,6 +96,7 @@ export default function Cart({ restaurantId }: { restaurantId: string }) {
                         <button
                             onClick={() => updateQuantity(item._id, item.quantity + 1)}
                             className="bg-gray-200 text-gray-700 px-2 py-1 rounded-r hover:bg-gray-300 transition-colors"
+                            disabled={!item.isAvailable}
                         >
                             +
                         </button>

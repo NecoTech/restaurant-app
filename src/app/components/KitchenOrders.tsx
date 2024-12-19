@@ -2,26 +2,34 @@
 
 import React, { useState, useEffect } from 'react';
 
+type OrderItem = {
+    name: string;
+    quantity: number;
+};
+
 type Order = {
     _id: string;
     orderNumber: string;
-    items: Array<{
-        name: string;
-        quantity: number;
-    }>;
+    items: OrderItem[];
     userId: string;
     tableNumber: number;
     createdAt: string;
 };
 
 type MenuItem = {
-    _id: string;
     name: string;
     price: number;
-    category: string;
-    image: string;
-    description: string;
+    description?: string;
     isAvailable: boolean;
+    image?: string;
+    volume?: string;
+};
+
+type MenuCategory = {
+    _id: string;
+    id: string;
+    category: string;
+    items: MenuItem[];
 };
 
 type WaiterAssistance = {
@@ -33,9 +41,10 @@ type WaiterAssistance = {
 
 export default function KitchenOrders({ restaurantId }: { restaurantId: string }) {
     const [orders, setOrders] = useState<Order[]>([]);
-    const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+    const [menuCategories, setMenuCategories] = useState<MenuCategory[]>([]);
     const [waiterAssistance, setWaiterAssistance] = useState<WaiterAssistance[]>([]);
     const [activeTab, setActiveTab] = useState<'orders' | 'menu' | 'assistance'>('orders');
+    const [selectedCategory, setSelectedCategory] = useState<string>('all');
 
     useEffect(() => {
         fetchOrders();
@@ -52,9 +61,7 @@ export default function KitchenOrders({ restaurantId }: { restaurantId: string }
     const fetchOrders = async () => {
         try {
             const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/orders/restaurant/${restaurantId}`);
-            if (!response.ok) {
-                throw new Error('Failed to fetch orders');
-            }
+            if (!response.ok) throw new Error('Failed to fetch orders');
             const data = await response.json();
             setOrders(data);
         } catch (error) {
@@ -65,11 +72,9 @@ export default function KitchenOrders({ restaurantId }: { restaurantId: string }
     const fetchMenuItems = async () => {
         try {
             const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/menu/${restaurantId}`);
-            if (!response.ok) {
-                throw new Error('Failed to fetch menu items');
-            }
+            if (!response.ok) throw new Error('Failed to fetch menu items');
             const data = await response.json();
-            setMenuItems(data);
+            setMenuCategories(data);
         } catch (error) {
             console.error('Error fetching menu items:', error);
         }
@@ -78,13 +83,46 @@ export default function KitchenOrders({ restaurantId }: { restaurantId: string }
     const fetchWaiterAssistance = async () => {
         try {
             const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/waiter-request/${restaurantId}`);
-            if (!response.ok) {
-                throw new Error('Failed to fetch waiter assistance requests');
-            }
+            if (!response.ok) throw new Error('Failed to fetch waiter assistance requests');
             const data = await response.json();
             setWaiterAssistance(data);
         } catch (error) {
             console.error('Error fetching waiter assistance requests:', error);
+        }
+    };
+
+    const toggleItemAvailability = async (categoryId: string, itemName: string, currentAvailability: boolean) => {
+        try {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/menus/${categoryId}/item`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    itemName,
+                    isAvailable: !currentAvailability
+                }),
+            });
+
+            if (!response.ok) throw new Error('Failed to update item availability');
+
+            setMenuCategories(prevCategories =>
+                prevCategories.map(category => {
+                    if (category._id === categoryId) {
+                        return {
+                            ...category,
+                            items: category.items.map(item =>
+                                item.name === itemName
+                                    ? { ...item, isAvailable: !currentAvailability }
+                                    : item
+                            )
+                        };
+                    }
+                    return category;
+                })
+            );
+        } catch (error) {
+            console.error('Error updating item availability:', error);
         }
     };
 
@@ -93,32 +131,10 @@ export default function KitchenOrders({ restaurantId }: { restaurantId: string }
             const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/orders/${orderId}/complete`, {
                 method: 'PATCH',
             });
-            if (!response.ok) {
-                throw new Error('Failed to mark order as completed');
-            }
+            if (!response.ok) throw new Error('Failed to mark order as completed');
             setOrders(orders.filter(order => order._id !== orderId));
         } catch (error) {
             console.error('Error marking order as completed:', error);
-        }
-    };
-
-    const toggleItemAvailability = async (itemId: string, isAvailable: boolean) => {
-        try {
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/menu/menu-item/${itemId}`, {
-                method: 'PATCH',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ isAvailable }),
-            });
-            if (!response.ok) {
-                throw new Error('Failed to update item availability');
-            }
-            setMenuItems(menuItems.map(item =>
-                item._id === itemId ? { ...item, isAvailable } : item
-            ));
-        } catch (error) {
-            console.error('Error updating item availability:', error);
         }
     };
 
@@ -127,14 +143,23 @@ export default function KitchenOrders({ restaurantId }: { restaurantId: string }
             const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/${assistanceId}/complete`, {
                 method: 'PATCH',
             });
-            if (!response.ok) {
-                throw new Error('Failed to mark assistance as completed');
-            }
+            if (!response.ok) throw new Error('Failed to mark assistance as completed');
             setWaiterAssistance(waiterAssistance.filter(assistance => assistance._id !== assistanceId));
         } catch (error) {
             console.error('Error marking assistance as completed:', error);
         }
     };
+
+    const getUnavailableItemsCount = () => {
+        return menuCategories.reduce((count, category) =>
+            count + category.items.filter(item => !item.isAvailable).length, 0
+        );
+    };
+
+    const categories = ['all', ...menuCategories.map(cat => cat.category)];
+    const filteredCategories = selectedCategory === 'all'
+        ? menuCategories
+        : menuCategories.filter(cat => cat.category === selectedCategory);
 
     return (
         <div className="container mx-auto p-4">
@@ -162,7 +187,7 @@ export default function KitchenOrders({ restaurantId }: { restaurantId: string }
                     </button>
                 </div>
                 <div className="flex items-center space-x-4">
-                    <span className="text-sm font-semibold">Unavailable Items: {menuItems.filter(item => !item.isAvailable).length}</span>
+                    <span className="text-sm font-semibold">Unavailable Items: {getUnavailableItemsCount()}</span>
                     <span className="text-sm font-semibold">Pending Assistance: {waiterAssistance.length}</span>
                 </div>
             </div>
@@ -204,24 +229,52 @@ export default function KitchenOrders({ restaurantId }: { restaurantId: string }
             {activeTab === 'menu' && (
                 <div>
                     <h2 className="text-xl font-semibold mb-2">Menu Item Availability</h2>
+                    <div className="mb-4 flex space-x-2 overflow-x-auto pb-2">
+                        {categories.map((category) => (
+                            <button
+                                key={category}
+                                onClick={() => setSelectedCategory(category)}
+                                className={`px-4 py-2 rounded whitespace-nowrap ${selectedCategory === category
+                                    ? 'bg-blue-500 text-white'
+                                    : 'bg-gray-200'
+                                    }`}
+                            >
+                                {category.charAt(0).toUpperCase() + category.slice(1)}
+                            </button>
+                        ))}
+                    </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {menuItems.map((item) => (
-                            <div key={item._id} className="bg-white shadow-md rounded-lg p-4">
-                                <h3 className="text-lg font-semibold mb-2">{item.name}</h3>
-                                <p className="text-gray-600 mb-2">{item.category}</p>
-                                <div className="flex items-center justify-between">
-                                    <span className={item.isAvailable ? 'text-green-500' : 'text-red-500'}>
-                                        {item.isAvailable ? 'Available' : 'Unavailable'}
-                                    </span>
-                                    <button
-                                        onClick={() => toggleItemAvailability(item._id, !item.isAvailable)}
-                                        className={`px-4 py-2 rounded ${item.isAvailable
-                                            ? 'bg-red-500 hover:bg-red-600'
-                                            : 'bg-green-500 hover:bg-green-600'
-                                            } text-white`}
-                                    >
-                                        {item.isAvailable ? 'Mark Unavailable' : 'Mark Available'}
-                                    </button>
+                        {filteredCategories.map((category) => (
+                            <div key={category._id} className="bg-white shadow-md rounded-lg p-4">
+                                <h3 className="text-lg font-semibold mb-4">{category.category}</h3>
+                                <div className="space-y-3">
+                                    {category.items.map((item) => (
+                                        <div
+                                            key={`${category._id}-${item.name}`}
+                                            className="flex items-center justify-between border-b pb-2"
+                                        >
+                                            <div>
+                                                <p className="font-medium">{item.name}</p>
+                                                {item.volume && (
+                                                    <p className="text-sm text-gray-500">{item.volume}</p>
+                                                )}
+                                            </div>
+                                            <div className="flex items-center space-x-2">
+                                                <span className={item.isAvailable ? 'text-green-500' : 'text-red-500'}>
+                                                    {item.isAvailable ? 'Available' : 'Unavailable'}
+                                                </span>
+                                                <button
+                                                    onClick={() => toggleItemAvailability(category._id, item.name, item.isAvailable)}
+                                                    className={`px-3 py-1 rounded text-sm ${item.isAvailable
+                                                        ? 'bg-red-500 hover:bg-red-600'
+                                                        : 'bg-green-500 hover:bg-green-600'
+                                                        } text-white`}
+                                                >
+                                                    Toggle
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))}
                                 </div>
                             </div>
                         ))}

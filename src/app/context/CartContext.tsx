@@ -3,19 +3,15 @@
 import React, { createContext, useState, useContext, useEffect, useCallback, useMemo } from 'react'
 
 type CartItem = {
-    _id: string
-    id: string
+    _id: string          // Combined categoryId-itemName as unique identifier
+    categoryId: string   // Reference to the category
     name: string
     price: number
     quantity: number
-    image: {
-        data: {
-            type: string
-            data: number[]
-        }
-        contentType: string
-    }
-    description: string
+    image?: string
+    description?: string
+    volume?: string
+    isAvailable: boolean
 }
 
 // Type for storage (excluding image)
@@ -62,20 +58,23 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
                     try {
                         const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/menu/${savedRestaurantId}`)
                         if (!response.ok) throw new Error('Failed to fetch menu items')
-                        const menuItems = await response.json()
+                        const menuCategories = await response.json()
 
                         // Merge saved cart items with fetched menu items to get images
                         const updatedCart = parsedCart.map(cartItem => {
-                            const menuItem = menuItems.find((item: any) => item._id === cartItem._id)
+                            // Find the category and item
+                            const category = menuCategories.find((cat: any) => cat._id === cartItem.categoryId)
+                            const menuItem = category?.items.find((item: any) => item.name === cartItem.name)
+
                             return {
                                 ...cartItem,
-                                image: menuItem?.image || null
+                                image: menuItem?.image || undefined,
+                                isAvailable: menuItem?.isAvailable ?? false
                             }
                         })
                         setCartItems(updatedCart)
                     } catch (error) {
                         console.error('Error fetching menu items:', error)
-                        // setCartItems(parsedCart as CartItem[]) // Fallback to saved cart without images
                     }
                 }
 
@@ -120,6 +119,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }, [cartItems, restaurantId, tableNumber, isInitialized])
 
     const addToCart = useCallback((item: Omit<CartItem, 'quantity'>) => {
+        if (!item.isAvailable) return
+
         setCartItems((prevItems) => {
             const existingItem = prevItems.find((i) => i._id === item._id)
             if (existingItem) {
@@ -213,6 +214,7 @@ export const CartItemComponent = React.memo(function CartItemComponent({
         <div>
             <span>{item.name}</span>
             <span>Quantity: {item.quantity}</span>
+            {item.volume && <span>Volume: {item.volume}</span>}
         </div>
     )
 })

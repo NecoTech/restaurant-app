@@ -7,25 +7,24 @@ import { useRouter } from 'next/navigation'
 import { useAuth } from '..//context/AuthContext'
 import DinoGame from '../components/Dinogame'
 
+type MenuItemData = {
+    name: string
+    price: number
+    description?: string
+    image?: string
+    isAvailable: boolean
+    volume?: string
+}
+
 type MenuItem = {
     _id: string
     id: string
-    name: string
-    price: number
     category: string
-    image: {
-        data: {
-            type: string
-            data: number[]
-        }
-        contentType: string
-    }
-    description: string
-    isAvailable: boolean
+    items: MenuItemData[]
 }
-export default function Menu({ restaurantId }: { restaurantId: string }) {
 
-    const [menuItems, setMenuItems] = useState<MenuItem[]>([])
+export default function Menu({ restaurantId }: { restaurantId: string }) {
+    const [menuCategories, setMenuCategories] = useState<MenuItem[]>([])
     const [activeCategory, setActiveCategory] = useState<string>('All')
     const [isLoading, setIsLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
@@ -36,28 +35,21 @@ export default function Menu({ restaurantId }: { restaurantId: string }) {
     const [waiterReason, setWaiterReason] = useState<string>('Assistance')
     const [tableNumber, setTableNumber] = useState<string>('')
 
-    const handleQuantityUpdate = (e: React.MouseEvent, itemId: string, action: 'increase' | 'decrease') => {
+    const handleQuantityUpdate = (e: React.MouseEvent, categoryId: string, itemName: string, action: 'increase' | 'decrease') => {
         e.preventDefault()
         e.stopPropagation()
 
-        const currentQuantity = getItemQuantity(itemId)
-        const item = menuItems.find(item => item._id === itemId)
+        const currentQuantity = getItemQuantity(categoryId, itemName)
+        const category = menuCategories.find(cat => cat._id === categoryId)
+        const item = category?.items.find(item => item.name === itemName)
 
-        if (!item) return
+        if (!category || !item) return
 
         if (action === 'increase') {
-            handleAddToCart(item)
+            handleAddToCart(category._id, item)
         } else {
-            handleUpdateQuantity(itemId, currentQuantity - 1)
+            handleUpdateQuantity(categoryId, itemName, currentQuantity - 1)
         }
-    }
-
-    const getImageUrl = (item: MenuItem) => {
-        if (item.image?.data?.data) {
-            const base64String = Buffer.from(item.image.data.data).toString('base64')
-            return `data:${item.image.contentType};base64,${base64String}`
-        }
-        return '' // Return empty string or a default image URL
     }
 
     const fetchMenuItems = async () => {
@@ -67,7 +59,7 @@ export default function Menu({ restaurantId }: { restaurantId: string }) {
                 throw new Error('Failed to fetch menu items')
             }
             const data = await response.json()
-            setMenuItems(data)
+            setMenuCategories(data)
             setIsLoading(false)
         } catch (err) {
             setError('Failed to load menu items. Please try again later.')
@@ -78,41 +70,48 @@ export default function Menu({ restaurantId }: { restaurantId: string }) {
 
     useEffect(() => {
         fetchMenuItems()
-
-        // Set up interval to fetch menu items every 15 seconds
         const intervalId = setInterval(fetchMenuItems, 25000)
-
-        // Clean up interval on component unmount
         return () => clearInterval(intervalId)
     }, [restaurantId])
 
-    const categories = ['All', ...Array.from(new Set(menuItems.map(item => item.category)))]
+    const categories = ['All', ...Array.from(new Set(menuCategories.map(item => item.category)))]
 
-    const filteredItems = activeCategory === 'All'
-        ? menuItems
-        : menuItems.filter(item => item.category === activeCategory)
+    const filteredCategories = activeCategory === 'All'
+        ? menuCategories
+        : menuCategories.filter(item => item.category === activeCategory)
 
     const handleViewOrders = () => {
         router.push(`/orders/${user?.phoneNumber}`)
     }
 
-    const getItemQuantity = (itemId: string) => {
-        const cartItem = cartItems.find(item => item._id === itemId)
+    const getItemQuantity = (categoryId: string, itemName: string) => {
+        const cartItem = cartItems.find(item =>
+            item.categoryId === categoryId && item.name === itemName
+        )
         return cartItem ? cartItem.quantity : 0
     }
 
-    const handleAddToCart = (item: MenuItem) => {
+    const handleAddToCart = (categoryId: string, item: MenuItemData) => {
         if (item.isAvailable) {
-            addToCart(item)
+            addToCart({
+                _id: `${categoryId}-${item.name}`,
+                categoryId,
+                name: item.name,
+                price: item.price,
+                image: item.image,
+                description: item.description,
+                isAvailable: item.isAvailable,
+                volume: item.volume
+            })
         }
     }
 
-    const handleUpdateQuantity = (itemId: string, newQuantity: number) => {
-        updateQuantity(itemId, newQuantity)
+    const handleUpdateQuantity = (categoryId: string, itemName: string, newQuantity: number) => {
+        updateQuantity(`${categoryId}-${itemName}`, newQuantity)
     }
 
-    const handleItemClick = (itemId: string) => {
-        router.push(`/menu-item/${itemId}`)
+    const handleItemClick = (categoryId: string, itemName: string) => {
+        router.push(`/menu-item/${categoryId}/${itemName}`)
     }
 
     const handleCallWaiter = async () => {
@@ -159,7 +158,6 @@ export default function Menu({ restaurantId }: { restaurantId: string }) {
             <div className="sticky top-0 bg-white z-10 p-4 shadow-md flex justify-between items-center">
                 <h1 className="text-xl font-bold">Menu</h1>
                 <div className="flex items-center space-x-4">
-
                     <button
                         onClick={() => setIsWaiterModalOpen(true)}
                         className="bg-yellow-500 text-white px-4 py-2 rounded-full hover:bg-yellow-600 transition-colors"
@@ -220,69 +218,76 @@ export default function Menu({ restaurantId }: { restaurantId: string }) {
             )}
 
             <div className="mt-4 space-y-4 mb-4">
-                {filteredItems.map((item) => (
-                    <div
-                        key={item._id}
-                        className={`flex items-center bg-white p-4 rounded-lg shadow cursor-pointer hover:shadow-md transition-shadow ${!item.isAvailable ? 'opacity-50' : ''}`}
-                        onClick={() => handleItemClick(item._id)}
-                    >
-                        <div className="relative w-24 h-24 mr-4 bg-gray-200 rounded-md">
-                            {getImageUrl(item) && (
-                                <Image
-                                    src={getImageUrl(item)}
-                                    alt={item.name}
-                                    layout="fill"
-                                    objectFit="cover"
-                                    className="rounded-md"
-                                />
-                            )}
-                            {!item.isAvailable && (
-                                <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center rounded-md">
-                                    <span className="text-white font-bold">Out of Stock</span>
-                                </div>
-                            )}
-                        </div>
-                        <div className="flex-grow">
-                            <h3 className="font-bold text-lg">{item.name}</h3>
-                            <p className="text-blue-600 font-semibold mt-1">${item.price.toFixed(2)}</p>
-                        </div>
+                {filteredCategories.map((category) => (
+                    category.items.map((item) => (
                         <div
-                            className="flex items-center"
-                            onClick={(e) => {
-                                e.preventDefault()
-                                e.stopPropagation()
-                            }}
+                            key={`${category._id}-${item.name}`}
+                            className={`flex items-center bg-white p-4 rounded-lg shadow cursor-pointer hover:shadow-md transition-shadow ${!item.isAvailable ? 'opacity-50' : ''}`}
+                            onClick={() => handleItemClick(category._id, item.name)}
                         >
-                            {item.isAvailable ? (
-                                getItemQuantity(item._id) === 0 ? (
-                                    <button
-                                        onClick={(e) => handleQuantityUpdate(e, item._id, 'increase')}
-                                        className="bg-blue-500 text-white px-4 py-2 rounded-full hover:bg-blue-600 transition-colors"
-                                    >
-                                        Add
-                                    </button>
-                                ) : (
-                                    <div className="flex items-center">
-                                        <button
-                                            onClick={(e) => handleQuantityUpdate(e, item._id, 'decrease')}
-                                            className="bg-gray-200 text-gray-700 w-8 h-8 rounded-full flex items-center justify-center hover:bg-gray-300 transition-colors"
-                                        >
-                                            -
-                                        </button>
-                                        <span className="mx-2 w-8 text-center">{getItemQuantity(item._id)}</span>
-                                        <button
-                                            onClick={(e) => handleQuantityUpdate(e, item._id, 'increase')}
-                                            className="bg-blue-500 text-white w-8 h-8 rounded-full flex items-center justify-center hover:bg-blue-600 transition-colors"
-                                        >
-                                            +
-                                        </button>
+                            <div className="relative w-24 h-24 mr-4 bg-gray-200 rounded-md">
+                                {item.image && (
+                                    <Image
+                                        src={`data:image/jpeg;base64,${item.image}`}
+                                        alt={item.name}
+                                        layout="fill"
+                                        objectFit="cover"
+                                        className="rounded-md"
+                                    />
+                                )}
+                                {!item.isAvailable && (
+                                    <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center rounded-md">
+                                        <span className="text-white font-bold">Out of Stock</span>
                                     </div>
-                                )
-                            ) : (
-                                <span className="text-red-500 font-semibold">Unavailable</span>
-                            )}
+                                )}
+                            </div>
+                            <div className="flex-grow">
+                                <h3 className="font-bold text-lg">{item.name}</h3>
+                                <p className="text-blue-600 font-semibold mt-1">${item.price}</p>
+                                {item.volume && (
+                                    <p className="text-gray-500 text-sm">{item.volume}</p>
+                                )}
+                            </div>
+                            <div
+                                className="flex items-center"
+                                onClick={(e) => {
+                                    e.preventDefault()
+                                    e.stopPropagation()
+                                }}
+                            >
+                                {item.isAvailable ? (
+                                    getItemQuantity(category._id, item.name) === 0 ? (
+                                        <button
+                                            onClick={(e) => handleQuantityUpdate(e, category._id, item.name, 'increase')}
+                                            className="bg-blue-500 text-white px-4 py-2 rounded-full hover:bg-blue-600 transition-colors"
+                                        >
+                                            Add
+                                        </button>
+                                    ) : (
+                                        <div className="flex items-center">
+                                            <button
+                                                onClick={(e) => handleQuantityUpdate(e, category._id, item.name, 'decrease')}
+                                                className="bg-gray-200 text-gray-700 w-8 h-8 rounded-full flex items-center justify-center hover:bg-gray-300 transition-colors"
+                                            >
+                                                -
+                                            </button>
+                                            <span className="mx-2 w-8 text-center">
+                                                {getItemQuantity(category._id, item.name)}
+                                            </span>
+                                            <button
+                                                onClick={(e) => handleQuantityUpdate(e, category._id, item.name, 'increase')}
+                                                className="bg-blue-500 text-white w-8 h-8 rounded-full flex items-center justify-center hover:bg-blue-600 transition-colors"
+                                            >
+                                                +
+                                            </button>
+                                        </div>
+                                    )
+                                ) : (
+                                    <span className="text-red-500 font-semibold">Unavailable</span>
+                                )}
+                            </div>
                         </div>
-                    </div>
+                    ))
                 ))}
             </div>
 

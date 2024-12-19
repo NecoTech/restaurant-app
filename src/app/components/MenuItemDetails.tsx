@@ -3,26 +3,20 @@
 import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
+// import defaultFoodImage from '@/assets/default-food.png'
 
 type MenuItem = {
-    _id: string
-    id: string
     name: string
     price: number
-    category: string
-    image: {
-        data: {
-            type: string
-            data: number[]
-        }
-        contentType: string
-    }
-    description: string
+    description?: string
+    image?: string
+    volume?: string
+    isAvailable: boolean
 }
 
-export default function MenuItemDetails({ itemid }: { itemid: string }) {
+export default function MenuItemDetails({ categoryId, itemName }: { categoryId: string, itemName: string }) {
     const [item, setItem] = useState<MenuItem | null>(null)
-    const [imageUrl, setImageUrl] = useState<string>('')
+    const [category, setCategory] = useState<string | null>(null)
     const [isLoading, setIsLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const router = useRouter()
@@ -32,19 +26,16 @@ export default function MenuItemDetails({ itemid }: { itemid: string }) {
             setIsLoading(true)
             setError(null)
             try {
-                const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/menu/menu-item/${itemid}`)
+                const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/menus/${categoryId}/item?itemName=${encodeURIComponent(itemName)}`)
                 if (!response.ok) {
                     throw new Error('Failed to fetch menu item')
                 }
                 const data = await response.json()
-                setItem(data)
-
-                // Convert image buffer to base64 URL
-                if (data.image?.data?.data) {
-                    const base64String = Buffer.from(data.image.data.data).toString('base64')
-                    const url = `data:${data.image.contentType};base64,${base64String}`
-                    setImageUrl(url)
+                if (!data.success) {
+                    throw new Error(data.message || 'Failed to fetch menu item')
                 }
+                setItem(data.data)
+                setCategory(data.category)
             } catch (err) {
                 setError('Failed to load menu item. Please try again later.')
                 console.error(err)
@@ -53,8 +44,10 @@ export default function MenuItemDetails({ itemid }: { itemid: string }) {
             }
         }
 
-        fetchMenuItem()
-    }, [itemid])
+        if (categoryId && itemName) {
+            fetchMenuItem()
+        }
+    }, [categoryId, itemName])
 
     if (isLoading) {
         return (
@@ -99,21 +92,42 @@ export default function MenuItemDetails({ itemid }: { itemid: string }) {
             </button>
             <div className="bg-white rounded-lg shadow-lg overflow-hidden">
                 <div className="relative h-64 sm:h-80 md:h-96 bg-gray-200">
-                    {imageUrl && (
-                        <Image
-                            src={imageUrl}
-                            alt={item.name}
-                            layout="fill"
-                            objectFit="cover"
-                            priority
-                            className="transition-opacity duration-300"
-                        />
-                    )}
+                    <Image
+                        src={`data:image/jpeg;base64,${item.image}`}
+                        alt={item.name}
+                        layout="fill"
+                        objectFit="cover"
+                        priority
+                        className="transition-opacity duration-300"
+                        onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            // target.src = .src;
+                        }}
+                    />
                 </div>
                 <div className="p-6">
-                    <h1 className="text-3xl font-bold mb-2">{item.name}</h1>
-                    <p className="text-gray-600 mb-4">{item.description}</p>
-                    <p className="text-2xl text-blue-600 font-semibold mb-4">${item.price.toFixed(2)}</p>
+                    <div className="flex justify-between items-start mb-4">
+                        <div>
+                            <h1 className="text-3xl font-bold mb-1">{item.name}</h1>
+                            {category && (
+                                <p className="text-gray-500 text-sm">{category}</p>
+                            )}
+                        </div>
+                        <div className="text-right">
+                            <p className="text-2xl text-blue-600 font-semibold">${item.price.toFixed(2)}</p>
+                            {item.volume && (
+                                <p className="text-gray-500 text-sm mt-1">{item.volume}</p>
+                            )}
+                        </div>
+                    </div>
+                    {!item.isAvailable && (
+                        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded mb-4">
+                            Currently Unavailable
+                        </div>
+                    )}
+                    {item.description && (
+                        <p className="text-gray-600">{item.description}</p>
+                    )}
                 </div>
             </div>
         </div>
