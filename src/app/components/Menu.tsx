@@ -5,6 +5,7 @@ import Image from 'next/image'
 import { useCart } from '..//context/CartContext'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '..//context/AuthContext'
+import { useCurrency } from '..//context/CurrencyContext'
 import DinoGame from '../components/Dinogame'
 
 type MenuItemData = {
@@ -34,6 +35,7 @@ export default function Menu({ restaurantId }: { restaurantId: string }) {
     const [isWaiterModalOpen, setIsWaiterModalOpen] = useState(false)
     const [waiterReason, setWaiterReason] = useState<string>('Assistance')
     const [tableNumber, setTableNumber] = useState<string>('')
+    const { currency, setCurrency } = useCurrency()
 
     const handleQuantityUpdate = (e: React.MouseEvent, categoryId: string, itemName: string, action: 'increase' | 'decrease') => {
         e.preventDefault()
@@ -243,7 +245,7 @@ export default function Menu({ restaurantId }: { restaurantId: string }) {
                             </div>
                             <div className="flex-grow">
                                 <h3 className="font-bold text-lg">{item.name}</h3>
-                                <p className="text-blue-600 font-semibold mt-1">${item.price}</p>
+                                <p className="text-blue-600 font-semibold mt-1">{currency}{item.price}</p>
                                 {item.volume && (
                                     <p className="text-gray-500 text-sm">{item.volume}</p>
                                 )}

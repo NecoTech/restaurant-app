@@ -6,6 +6,7 @@ import Image from 'next/image'
 import Menu from '..//../components/Menu'
 import { CartProvider, useCart } from '..//../context/CartContext'
 import { AuthProvider, useAuth } from '..//../context/AuthContext'
+import { CurrencyProvider, useCurrency } from '..//../context/CurrencyContext'
 import CartIcon from '..//../components/CartIcon'
 import FloatingCartIcon from '..//../components/FloatingCartIcon'
 import Login from '..//../components/Login'
@@ -20,7 +21,9 @@ type Restaurant = {
     id: string
     name: string
     bannerImage: BannerImage
+    currency: string
 }
+
 
 function RestaurantContent() {
     const params = useParams()
@@ -33,6 +36,7 @@ function RestaurantContent() {
     const { clearCart } = useCart()
     const [isLoading, setIsLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
+    const { setCurrency } = useCurrency()
 
     useEffect(() => {
         const fetchRestaurant = async () => {
@@ -47,6 +51,10 @@ function RestaurantContent() {
                 setRestaurant(data[0])
                 setRestaurantId(id as string)
 
+                // Set the restaurant's currency
+                if (data[0].currency) {
+                    setCurrency(data[0].currency)
+                }
                 // Create image URL from base64 data
                 if (data[0].bannerImage) {
                     const imageUrl = `data:${data[0].bannerImage.contentType};base64,${data[0].bannerImage}`
@@ -61,7 +69,11 @@ function RestaurantContent() {
         }
 
         fetchRestaurant()
-    }, [id, setRestaurantId])
+        // Cleanup function to reset currency when unmounting
+        return () => {
+            setCurrency('₹') // Reset to default currency
+        }
+    }, [id, setRestaurantId, setCurrency])
 
     if (!user) {
         return (
@@ -125,9 +137,11 @@ function RestaurantContent() {
 export default function RestaurantPage() {
     return (
         <AuthProvider>
+            {/* <CurrencyProvider> */}
             <CartProvider>
                 <RestaurantContent />
             </CartProvider>
+            {/* </CurrencyProvider> */}
         </AuthProvider>
     )
 }

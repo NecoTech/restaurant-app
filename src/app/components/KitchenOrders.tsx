@@ -25,6 +25,16 @@ type MenuItem = {
     volume?: string;
 };
 
+type StockItem = {
+    _id: string;
+    name: string;
+    quantity: number;
+    unit: string;
+    minQuantity: number;
+    description?: string;
+    lastUpdated: string;
+};
+
 type MenuCategory = {
     _id: string;
     id: string;
@@ -67,7 +77,7 @@ export default function KitchenOrders({ restaurantId }: { restaurantId: string }
     const [orders, setOrders] = useState<Order[]>([]);
     const [menuCategories, setMenuCategories] = useState<MenuCategory[]>([]);
     const [waiterAssistance, setWaiterAssistance] = useState<WaiterAssistance[]>([]);
-    const [activeTab, setActiveTab] = useState<'orders' | 'menu' | 'assistance'>('orders');
+    const [activeTab, setActiveTab] = useState<'orders' | 'menu' | 'assistance' | 'stock'>('orders');
     const [selectedCategory, setSelectedCategory] = useState<string>('all');
     // Add to existing state
     const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -78,16 +88,25 @@ export default function KitchenOrders({ restaurantId }: { restaurantId: string }
     const [hasMore, setHasMore] = useState(true);
     const [isLoading, setIsLoading] = useState(false);
     const [ownerEmail, setOwnerEmail] = useState<string>('');
-    const userEmail = 'nirmaljohny95@gmail.com'
+    // const userEmail = 'nirmaljohny95@gmail.com'
+    const [stockItems, setStockItems] = useState<StockItem[]>([]);
+    const [isStockDialogOpen, setIsStockDialogOpen] = useState(false);
+    const [selectedStock, setSelectedStock] = useState<StockItem | null>(null);
+    const [stockUpdateAmount, setStockUpdateAmount] = useState('');
+    const [stockSearchQuery, setStockSearchQuery] = useState('');
+
+
 
     useEffect(() => {
         fetchOrders();
         fetchMenuItems();
         fetchWaiterAssistance();
+        fetchStockItems();
         const intervalId = setInterval(() => {
             fetchOrders();
             fetchMenuItems();
             fetchWaiterAssistance();
+            fetchStockItems();
         }, 30000);
         return () => clearInterval(intervalId);
     }, [restaurantId]);
@@ -128,7 +147,7 @@ export default function KitchenOrders({ restaurantId }: { restaurantId: string }
     const fetchMessages = async (loadMore = false) => {
         try {
             setIsLoading(true);
-            let url = `${process.env.NEXT_PUBLIC_API_URL}/api/messages?restaurantId=${restaurantId}&userEmail=${encodeURIComponent(userEmail)}`;
+            let url = `${process.env.NEXT_PUBLIC_API_URL}/api/messages?restaurantId=${restaurantId}&userEmail=${encodeURIComponent(ownerEmail)}`;
 
             if (loadMore && lastMessageId) {
                 url += `&lastMessageId=${lastMessageId}`;
@@ -158,6 +177,50 @@ export default function KitchenOrders({ restaurantId }: { restaurantId: string }
         }
     };
 
+    const fetchStockItems = async () => {
+        try {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/stock/${restaurantId}`);
+            if (!response.ok) throw new Error('Failed to fetch stock items');
+            const data = await response.json();
+            setStockItems(data);
+        } catch (error) {
+            console.error('Error fetching stock items:', error);
+        }
+    };
+
+    const handleStockUpdate = async () => {
+        if (!selectedStock || !stockUpdateAmount) return;
+
+        try {
+            const amount = parseFloat(stockUpdateAmount);
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/stock/${selectedStock._id}/update`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    quantity: selectedStock.quantity - amount,
+                    lastUpdated: new Date().toISOString(),
+                }),
+            });
+
+            if (!response.ok) throw new Error('Failed to update stock');
+
+            await fetchStockItems();
+            setIsStockDialogOpen(false);
+            setSelectedStock(null);
+            setStockUpdateAmount('');
+        } catch (error) {
+            console.error('Error updating stock:', error);
+        }
+    };
+
+    // Filter stock items based on search query
+    const filteredStockItems = stockItems.filter(item =>
+        item.name.toLowerCase().includes(stockSearchQuery.toLowerCase())
+    );
+
+
     const sendMessage = async () => {
         if (!newMessage.trim()) return;
 
@@ -171,7 +234,7 @@ export default function KitchenOrders({ restaurantId }: { restaurantId: string }
                     },
                     body: JSON.stringify({
                         content: newMessage.trim(),
-                        senderEmail: userEmail,
+                        senderEmail: ownerEmail,
                         senderRole: 'kitchen',  // This is fixed as kitchen for this interface
                         senderName: 'Kitchen Staff',
                         restaurantId,
@@ -334,6 +397,12 @@ export default function KitchenOrders({ restaurantId }: { restaurantId: string }
                     >
                         Waiter Assistance
                     </button>
+                    <button
+                        onClick={() => setActiveTab('stock')}
+                        className={`px-4 py-2 rounded ${activeTab === 'stock' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+                    >
+                        Stock Management
+                    </button>
                 </div>
                 <div className="flex items-center space-x-4">
                     <span className="text-sm font-semibold">Unavailable Items: {getUnavailableItemsCount()}</span>
@@ -364,8 +433,8 @@ export default function KitchenOrders({ restaurantId }: { restaurantId: string }
                                 >
                                     <div
                                         className={`max-w-[70%] rounded-lg p-3 relative ${message.senderRole === 'kitchen'
-                                                ? 'bg-blue-500 text-white rounded-br-none ml-12'
-                                                : 'bg-gray-100 text-gray-900 rounded-bl-none mr-12'
+                                            ? 'bg-blue-500 text-white rounded-br-none ml-12'
+                                            : 'bg-gray-100 text-gray-900 rounded-bl-none mr-12'
                                             }`}
                                     >
                                         <div className="flex items-center justify-between mb-1">
@@ -413,8 +482,8 @@ export default function KitchenOrders({ restaurantId }: { restaurantId: string }
                                             {message.senderRole === 'kitchen' && (
                                                 <svg
                                                     className={`w-4 h-4 ${message.status === 'read'
-                                                            ? 'text-white/75'
-                                                            : 'text-white/50'
+                                                        ? 'text-white/75'
+                                                        : 'text-white/50'
                                                         }`}
                                                     fill="currentColor"
                                                     viewBox="0 0 20 20"
@@ -574,6 +643,151 @@ export default function KitchenOrders({ restaurantId }: { restaurantId: string }
                     )}
                 </div>
             )}
+
+            {activeTab === 'stock' && (
+                <div className="bg-white shadow-md rounded-lg p-4">
+                    <div className="mb-4">
+                        <input
+                            type="text"
+                            placeholder="Search stock items..."
+                            value={stockSearchQuery}
+                            onChange={(e) => setStockSearchQuery(e.target.value)}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {filteredStockItems.map((item) => (
+                            <div key={item._id} className="border rounded-lg shadow-sm hover:shadow-md transition-shadow">
+                                <div className="p-4 border-b">
+                                    <div className="flex justify-between items-center">
+                                        <h3 className="text-lg font-semibold">{item.name}</h3>
+                                        {item.quantity <= item.minQuantity && (
+                                            <span className="text-sm px-2 py-1 bg-red-100 text-red-600 rounded-full">
+                                                Low Stock
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+                                <div className="p-4">
+                                    <div className="space-y-2">
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-gray-600">Current Quantity:</span>
+                                            <span className="font-medium">
+                                                {item.quantity} {item.unit}
+                                            </span>
+                                        </div>
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-gray-600">Minimum Quantity:</span>
+                                            <span className="font-medium">
+                                                {item.minQuantity} {item.unit}
+                                            </span>
+                                        </div>
+                                        <p className="text-sm text-gray-500">
+                                            Last Updated: {new Date(item.lastUpdated).toLocaleDateString()}
+                                        </p>
+                                        <button
+                                            onClick={() => {
+                                                setSelectedStock(item);
+                                                setIsStockDialogOpen(true);
+                                            }}
+                                            className="w-full mt-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+                                        >
+                                            Update Stock
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    {isStockDialogOpen && (
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                            <div className="bg-white rounded-lg max-w-md w-full p-6">
+                                <div className="flex justify-between items-center mb-4">
+                                    <h2 className="text-xl font-semibold">
+                                        Update Stock: {selectedStock?.name}
+                                    </h2>
+                                    <button
+                                        onClick={() => {
+                                            setIsStockDialogOpen(false);
+                                            setSelectedStock(null);
+                                            setStockUpdateAmount('');
+                                        }}
+                                        className="text-gray-500 hover:text-gray-700 focus:outline-none"
+                                    >
+                                        <svg
+                                            className="w-6 h-6"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            viewBox="0 0 24 24"
+                                        >
+                                            <path
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                                strokeWidth={2}
+                                                d="M6 18L18 6M6 6l12 12"
+                                            />
+                                        </svg>
+                                    </button>
+                                </div>
+
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            Current Stock: {selectedStock?.quantity} {selectedStock?.unit}
+                                        </label>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            Amount to Remove
+                                        </label>
+                                        <input
+                                            type="number"
+                                            value={stockUpdateAmount}
+                                            onChange={(e) => setStockUpdateAmount(e.target.value)}
+                                            placeholder={`Enter amount in ${selectedStock?.unit}`}
+                                            min="0"
+                                            max={selectedStock?.quantity}
+                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        />
+                                    </div>
+
+                                    {selectedStock && parseFloat(stockUpdateAmount) > selectedStock.quantity && (
+                                        <div className="bg-red-50 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+                                            <span className="block sm:inline">
+                                                Cannot remove more than available stock
+                                            </span>
+                                        </div>
+                                    )}
+
+                                    <div className="flex justify-end space-x-2 pt-4">
+                                        <button
+                                            onClick={() => {
+                                                setIsStockDialogOpen(false);
+                                                setSelectedStock(null);
+                                                setStockUpdateAmount('');
+                                            }}
+                                            className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors"
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            onClick={handleStockUpdate}
+                                            disabled={!stockUpdateAmount ||
+                                                (selectedStock && parseFloat(stockUpdateAmount) > selectedStock.quantity)}
+                                            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                            Update Stock
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
+
         </div>
     );
 }

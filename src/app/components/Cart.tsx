@@ -1,6 +1,7 @@
 'use client'
 
 import { useCart } from '..//context/CartContext'
+import { useCurrency } from '..//context/CurrencyContext'
 import Image from 'next/image'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
@@ -20,6 +21,7 @@ type CartItemType = {
 export default function Cart({ restaurantId }: { restaurantId: string }) {
     const { cartItems, updateQuantity, removeFromCart, tableNumber, setTableNumber } = useCart()
     const [localTableNumber, setLocalTableNumber] = useState<string>('')
+    const { currency } = useCurrency()
     const router = useRouter()
 
     useEffect(() => {
@@ -80,7 +82,7 @@ export default function Cart({ restaurantId }: { restaurantId: string }) {
                     </div>
                     <div className="flex-grow">
                         <h3 className="font-bold text-lg">{item.name}</h3>
-                        <p className="text-gray-600">${item.price.toFixed(2)} each</p>
+                        <p className="text-gray-600">{currency}{item.price.toFixed(2)} each</p>
                         {item.volume && (
                             <p className="text-gray-500 text-sm">{item.volume}</p>
                         )}
@@ -112,15 +114,15 @@ export default function Cart({ restaurantId }: { restaurantId: string }) {
             <div className="mt-8 border-t pt-4">
                 <div className="flex justify-between mb-2">
                     <span className="text-gray-600">Subtotal:</span>
-                    <span>${subtotal.toFixed(2)}</span>
+                    <span>{currency}{subtotal.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between mb-2">
                     <span className="text-gray-600">Tax (13%):</span>
-                    <span>${tax.toFixed(2)}</span>
+                    <span>{currency}{tax.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between font-bold text-lg">
                     <span>Total:</span>
-                    <span>${total.toFixed(2)}</span>
+                    <span>{currency}{total.toFixed(2)}</span>
                 </div>
             </div>
             <button

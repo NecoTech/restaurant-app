@@ -5,11 +5,10 @@ import { useCart } from '..//context/CartContext'
 import { useRouter } from 'next/navigation'
 import { loadStripe } from '@stripe/stripe-js'
 import { useAuth } from '..//context/AuthContext'
+import { useCurrency } from '..//context/CurrencyContext'
 import GooglePayButton from '@google-pay/button-react'
 
-// Replace with your actual Stripe publishable key
 const stripePromise = loadStripe('pk_test_your_stripe_publishable_key')
-// const API_BASE_URL = 'http://localhost:5000';
 
 export default function Payment() {
     const { cartItems, clearCart, tableNumber } = useCart()
@@ -17,31 +16,36 @@ export default function Payment() {
     const [orderPlaced, setOrderPlaced] = useState(false)
     const router = useRouter()
     const [orderId, setOrderId] = useState<string | null>(null)
-    const restaurantid = localStorage.getItem("restaurantId");
-    const { user } = useAuth();
+    const [restaurantId, setRestaurantId] = useState<string | null>(null)
+    const { user } = useAuth()
+    const { currency } = useCurrency()
+
+    // Move localStorage access to useEffect
+    useEffect(() => {
+        const storedRestaurantId = localStorage.getItem("restaurantId");
+        setRestaurantId(storedRestaurantId);
+    }, []);
 
     const subtotal = cartItems.reduce((total, item) => total + item.price * item.quantity, 0)
     const tax = subtotal * 0.13
     const total = subtotal + tax
 
-    // const handleCounterPayment = async () => {
-    //     // Handle counter payment logic here
-    //     console.log('Processing counter payment...')
-    //     await placeOrder('counter')
-    // }
-
     const placeOrder = async (paymentMethod: 'counter' | 'googlepay') => {
-        const orderNumber = `ORD-` + restaurantid + `-${Math.random().toString(36).substr(2, 9)}`
-        const userId = user?.fullname // Replace with actual user ID from your auth system
-        const restaurantId = restaurantid // Replace with actual restaurant ID
+        if (!restaurantId) {
+            console.error('Restaurant ID not found');
+            alert('Restaurant ID not found. Please try again.');
+            return;
+        }
+
+        const orderNumber = `ORD-${restaurantId}-${Math.random().toString(36).substr(2, 9)}`
+        const userId = user?.fullname
         const phonenumber = user?.phoneNumber
 
-        // Remove image data from cart items
         const orderItems = cartItems.map(({ image, ...item }) => item)
 
         const orderDetails = {
             orderNumber,
-            items: orderItems, // Using the filtered items without images
+            items: orderItems,
             subtotal,
             tax,
             total,
@@ -68,7 +72,7 @@ export default function Payment() {
             }
 
             const savedOrder = await response.json()
-            setOrderId(savedOrder._id)
+            setOrderId(savedOrder.data._id)
             setOrderPlaced(true)
             clearCart()
         } catch (error) {
@@ -185,21 +189,21 @@ export default function Payment() {
                 {cartItems.map((item) => (
                     <div key={item._id} className="flex justify-between">
                         <span>{item.name} x {item.quantity}</span>
-                        <span>${(item.price * item.quantity).toFixed(2)}</span>
+                        <span>{currency}{(item.price * item.quantity).toFixed(2)}</span>
                     </div>
                 ))}
                 <div className="border-t mt-2 pt-2">
                     <div className="flex justify-between">
                         <span>Subtotal:</span>
-                        <span>${subtotal.toFixed(2)}</span>
+                        <span>{currency}{subtotal.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between">
                         <span>Tax (13%):</span>
-                        <span>${tax.toFixed(2)}</span>
+                        <span>{currency}{tax.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between font-bold">
                         <span>Total:</span>
-                        <span>${total.toFixed(2)}</span>
+                        <span>{currency}{total.toFixed(2)}</span>
                     </div>
                 </div>
             </div>
