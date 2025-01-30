@@ -245,8 +245,8 @@ export default function Menu({ restaurantId }: { restaurantId: string }) {
         </div>
       )}
 
-      <div className=" backdrop-blur-sm rounded-xl shadow-md z-10 my-2 ">
-        <div className="flex overflow-x-auto py-2 px-4 no-scrollbar items-center justify-evenly">
+      <div className=" backdrop-blur-sm rounded-xl shadow-md z-10 my-2 max-w-full ">
+        <div className="flex overflow-x-scroll py-2 rounded-xl px-4 no-scrollbar items-center justify-between">
           {categories.map((category) => (
             <button
               key={category}
