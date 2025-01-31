@@ -5,6 +5,7 @@ import Link from "next/link";
 import Cart from "..//..//../components/Cart";
 import { CartProvider, useCart } from "..//..//../context/CartContext";
 import { useEffect } from "react";
+import { DotLoader } from "react-spinners";
 
 function CartContent() {
   const params = useParams();
@@ -34,7 +35,9 @@ function CartContent() {
         {cartItems.length > 0 ? (
           <Cart restaurantId={id as string} />
         ) : (
-          <p className="text-center text-gray-500 my-8">Your cart is empty.</p>
+          <div className="flex flex-col items-center justify-center mt-[30vh]">
+            <DotLoader color="#fff" size={60} />
+          </div>
         )}
       </div>
     </div>

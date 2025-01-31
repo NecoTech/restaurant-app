@@ -32,6 +32,14 @@ export default function Cart({ restaurantId }: { restaurantId: string }) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
 
+  //set is loading to false when useCart is initialized
+  useEffect(() => {
+    console.log(cartItems);
+    if (cartItems.length > 0) {
+      setIsLoading(false);
+    }
+  }, [cartItems]);
+
   useEffect(() => {
     if (tableNumber !== null) {
       setLocalTableNumber(tableNumber.toString());
@@ -70,7 +78,7 @@ export default function Cart({ restaurantId }: { restaurantId: string }) {
       <div className="mb-6">
         <label
           htmlFor="tableNumber"
-          className="block text-sm font-medium text-white mb-2"
+          className="block text-xl font-bold  text-white mb-2"
         >
           Table Number
         </label>
