@@ -13,6 +13,7 @@ import Login from "..//../components/Login";
 import Register from "..//../components/Register";
 import Head from "next/head";
 import NavBar from "@/app/components/NavBar";
+import { DotLoader } from "react-spinners";
 
 type BannerImage = {
   data: string; // base64 data
@@ -96,15 +97,24 @@ function RestaurantContent() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100">
-        Loading restaurant details...
+      <div
+        className="min-h-screen bg-black min-w-screen max-w-screen text-white
+              bg-[url(/snacks-bg.webp)]
+             flex flex-col items-center justify-center max-h-screen overflow-y-hidden gap-10 overflow-x-hidden "
+      >
+        <DotLoader color="#fff" />
+        Loading details
       </div>
     );
   }
 
   if (error || !restaurant) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100">
+      <div
+        className="min-h-screen bg-black min-w-screen max-w-screen
+              bg-[url(/snacks-bg.webp)] text-white
+             flex flex-col items-center max-h-screen overflow-y-hidden overflow-x-hidden"
+      >
         <div className="text-center">
           <p className="text-red-500 text-lg mb-4">
             {error || "Failed to load restaurant"}
@@ -122,13 +132,13 @@ function RestaurantContent() {
 
   return (
     <div
-      className="min-h-screen bg-black
+      className="min-h-screen bg-black min-w-screen max-w-screen
               bg-[url(/snacks-bg.webp)]
              flex flex-col items-center max-h-screen overflow-y-hidden overflow-x-hidden"
     >
-      <div className="min-h-[98vh] flex flex-col items-center overflow-y-scroll overflow-x-hidden">
+      <div className="min-h-[98vh] min-w-[95vw] max-w-[95vw] flex flex-col items-center overflow-y-scroll no-scrollbar overflow-x-hidden">
         <div
-          className="relative min-h-[20vh] min-w-[92%]
+          className="relative min-h-[20vh] w-full h-fit
         bg-gray-800 mt-4 mx-2
         rounded-xl "
         >
@@ -137,11 +147,12 @@ function RestaurantContent() {
               src={bannerUrl}
               alt={restaurant.name}
               layout="fill"
-              objectFit="fit"
-              className="brightness-50 rounded-xl"
+              objectFit="cover"
+              className="brightness-50 rounded-xl min-h-fit"
               priority
             />
           )}
+
           <div className="absolute inset-0 flex flex-col  justify-end">
             <h1
               className="text-4xl font-bold text-white text-left p-6
